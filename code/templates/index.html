@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WEB-GPS</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        h1 {
+            text-align: center; /* Центрирование заголовка */
+        }
+        #graph {
+            margin: auto;  /* Центрирование графика */
+        }
+    </style>
+</head>
+<body>
+    <h1>GPS</h1>
+    <div id="graph"></div>
+
+    <script>
+        function updateGraph(data) {
+            // Создаем новый массив с данными
+            const graphData = data.data.map(point => ({
+                x: [point.x],  // массив x
+                y: [point.y],  // массив y
+                mode: point.mode,
+                marker: point.marker,
+                text: point.text,
+                textposition: point.textposition
+            }));
+
+            Plotly.react('graph', graphData, data.layout);
+        }
+
+        function fetchData() {
+            fetch('/graph-data')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);  // Отладочное сообщение
+                    updateGraph(data);  // Обновляем график
+                })
+                .catch(error => console.error('Ошибка:', error));
+        }
+
+        // Запускаем функцию обновления данных
+        setInterval(fetchData, 300);  // Обновляем график каждые 1 секунду
+    </script>
+</body>
+</html>
