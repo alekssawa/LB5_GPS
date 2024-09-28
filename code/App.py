@@ -87,15 +87,15 @@ def graph_data():
             last_updated = time.time()
 
             if points:
-                if len(points) >= 3:
+                valid_points = [point for point in points if point['id_satellite'] != 'Object']  # Фильтруем только валидные точки
+                if len(valid_points) >= 3:
                     distance_data = []
-                    valid_points = [point for point in points if
-                                    point['id_satellite'] != 'Object']  # Фильтруем только валидные точки
-
                     for point in valid_points:
                         distance = calculate_distance(point['sentAt'], point['receivedAt'])
                         distance_data.append((point['id_satellite'], distance))
 
+                    print(f"distance: {len(distance_data)}")
+                    print(f"valid_points: {len(valid_points)}")
                     # Печатаем данные для отладки
                     for i in range(len(distance_data)):
                         satellite_id = distance_data[i][0][-4:]  # Берем последние 4 символа ID
@@ -103,16 +103,24 @@ def graph_data():
 
                         # Проверяем, существует ли точка в valid_points перед печатью
                         if i < len(valid_points):  # Используем valid_points
-                            print(
-                                f"{valid_points[i]['id_satellite'][-4:]}: {valid_points[i]['x']}, {valid_points[i]['y']}, {valid_points[i]['sentAt']}, {valid_points[i]['receivedAt']}")
+                            print(f"{valid_points[i]['id_satellite'][-4:]}: {valid_points[i]['x']}, {valid_points[i]['y']}, {valid_points[i]['sentAt']}, {valid_points[i]['receivedAt']}")
+                    if len(distance_data) & len(valid_points) >= 3:
+                        point_X, point_Y = None, None
+                        # print("Отладка входных данных для calcX и calcY:")
+                        # print(f"distances: {[distance_data[0][1], distance_data[1][1], distance_data[2][1]]}")
+                        # print(f"coordinates X: {[valid_points[0]['id_satellite'][-4:],valid_points[1]['id_satellite'][-4:],valid_points[2]['id_satellite'][-4:], valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x']]}")
+                        # print(f"coordinates Y: {[valid_points[0]['id_satellite'][-4:],valid_points[1]['id_satellite'][-4:],valid_points[2]['id_satellite'][-4:], valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y']]}")
 
-                    point_X = calcX(distance_data[0][1],distance_data[1][1],distance_data[2][1],
-                                    points[0]['x'],points[1]['x'],points[2]['x'],
-                                    points[0]['y'],points[1]['y'],points[2]['y'],)
+                        point_X = calcX(distance_data[0][1], distance_data[1][1], distance_data[2][1],
+                                        valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x'],
+                                        valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y'])
 
-                    point_Y = calcY(distance_data[0][1],distance_data[1][1],distance_data[2][1],
-                                    points[0]['x'], points[1]['x'], points[2]['x'],
-                                    points[0]['y'], points[1]['y'], points[2]['y'], )
+                        point_Y = calcY(distance_data[0][1], distance_data[1][1], distance_data[2][1],
+                                        valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x'],
+                                        valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y'])
+
+                        # print(f"X: {point_X}")
+                        # print(f"Y: {point_Y}")
 
                     Object_point = next((point for point in points if point['text'][0].startswith('Object')),None)
 
@@ -124,6 +132,7 @@ def graph_data():
                         Object_point['receivedAt'] = 0
                         Object_point['last_updated'] = last_updated
                     else:
+                        #satellite_id = distance_data[-1][0][-4:]
                         print(f"Объект {id_satellite[-4:]} появился в зоне")
                         points.append({
                             'x': point_X,
@@ -167,15 +176,16 @@ def graph_data():
                 })
                 previous_id = id_satellite  # Обновляем предыдущее значение
 
-        #Удаляем устаревшие точки (более 5 секунд без обновления)
+        # Удаляем устаревшие точки, кроме объекта
         current_time = time.time()
-        points_to_remove = [point for point in points if current_time - point['last_updated'] > 10]
+        points_to_remove = [point for point in points if current_time - point['last_updated'] > 7 and point['id_satellite'] != 'Object']
 
+        # Печатаем информацию о выходе из зоны
         for point in points_to_remove:
             print(f"Спутник {(point['id_satellite'])[-4:]} вышел с зоны")
 
-        # Удаляем устаревшие точки
-        points = [point for point in points if current_time - point['last_updated'] <= 10]
+        # Обновляем список точек, исключая устаревшие
+        points = [point for point in points if current_time - point['last_updated'] <= 7 or point['id_satellite'] == 'Object']
 
         if points:
             x_values = [point['x'] for point in points]
@@ -183,11 +193,11 @@ def graph_data():
             layout = {
                 'xaxis': {
                     'title': 'X',
-                    'range': [min(x_values) - 10, max(x_values) + 10],  # Добавляем небольшой отступ
+                    'range': [0, 200],  # Добавляем небольшой отступ
                 },
                 'yaxis': {
                     'title': 'Y',
-                    'range': [min(y_values) - 10, max(y_values) + 10],  # Добавляем небольшой отступ
+                    'range': [0, 200],  # Добавляем небольшой отступ
                 },
             }
         else:
