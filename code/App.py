@@ -78,6 +78,7 @@ def graph_data():
     global previous_id, points  # Указываем, что используем глобальные переменные
     try:
         data = asyncio.run(get_data())
+        Object_point = None
         if data:
             x = data.get('x', 0)
             y = data.get('y', 0)
@@ -87,6 +88,10 @@ def graph_data():
             last_updated = time.time()
 
             if points:
+                if Object_point:
+                    if len(valid_points) <= 2:
+                        Object_point['marker'] = {'color': 'red', 'size': 12}
+
                 valid_points = [point for point in points if point['id_satellite'] != 'Object']  # Фильтруем только валидные точки
                 if len(valid_points) >= 3:
                     distance_data = []
@@ -142,7 +147,7 @@ def graph_data():
                             'id_satellite': 'Object',
                             'last_updated': last_updated,
                             'mode': 'markers+text',
-                            'marker': {'color': 'red', 'size': 12},
+                            'marker': {'color': 'green', 'size': 12},
                             'text': [f'Object'],
                             'textposition': 'top right'
                         })
@@ -193,11 +198,11 @@ def graph_data():
             layout = {
                 'xaxis': {
                     'title': 'X',
-                    'range': [0, 200],  # Добавляем небольшой отступ
+                    'range': [0, 120],  # Добавляем небольшой отступ
                 },
                 'yaxis': {
                     'title': 'Y',
-                    'range': [0, 200],  # Добавляем небольшой отступ
+                    'range': [0, 120],  # Добавляем небольшой отступ
                 },
             }
         else:
