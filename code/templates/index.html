@@ -7,70 +7,32 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="../static/style.css">
+    <script src="../static/script.js"></script>
 </head>
 <body>
     <h1>GPS</h1>
-    <div id="graph"></div>
-    <script>
-        function updateGraph(data) {
-            // Создаем новый массив с данными
-            const graphData = data.data.map(point => ({
-                x: [point.x],  // массив x
-                y: [point.y],  // массив y
-                mode: point.mode,
-                marker: point.marker,
-                text: point.text,
-                textposition: point.textposition
-            }));
-
-            Plotly.react('graph', graphData, data.layout);
-        }
-
-        function fetchData() {
-            fetch('/graph-data')
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data);  // Отладочное сообщение
-                    updateGraph(data);  // Обновляем график
-                })
-                .catch(error => console.error('Ошибка:', error));
-        }
-
-        // Запускаем функцию обновления данных
-        setInterval(fetchData, 300);  // Обновляем график каждые 1 секунду
-    </script>
-
-<!--    <div class="container">-->
-<!--        &lt;!&ndash; Форма для отправки новой конфигурации &ndash;&gt;-->
-<!--        <div class="form-container">-->
-<!--            <form onsubmit="event.preventDefault(); submitConfig();">-->
-<!--                <label style="font-size: 18px; font-weight: bold">Зміна конфігурації:</label>-->
-<!--                <label for="measurementsPerRotationInput">Вимірювань на один оберт:</label>-->
-<!--                <input type="number" id="measurementsPerRotationInput" required>-->
-
-<!--                <label for="rotationSpeedInput">Швидкість обертання:</label>-->
-<!--                <input type="number" id="rotationSpeedInput" required>-->
-
-<!--                <label for="targetSpeedInput">Швидкість цілей:</label>-->
-<!--                <input type="number" id="targetSpeedInput" required>-->
-
-<!--                <button type="submit">Отправить</button>-->
-<!--            </form>-->
-
-<!--            &lt;!&ndash; Элемент для отображения ответа сервера &ndash;&gt;-->
-<!--            <div id="responseMessage"></div>-->
-<!--        </div>-->
-
-<!--        &lt;!&ndash; Список конфигурации, который будет находиться справа от формы &ndash;&gt;-->
-<!--        <div class="config-container">-->
-<!--            <ul id="config-list">-->
-<!--                <li style="font-size: 18px; font-weight: bold">Поточна конфігурація:</li>-->
-<!--                <li>Вимірювань на один оберт: <span id="measurementsPerRotation">{{ json_data.measurementsPerRotation }}</span></li>-->
-<!--                <li>Швидкість обертання: <span id="rotationSpeed">{{ json_data.rotationSpeed }}</span></li>-->
-<!--                <li>Швидкість цілей: <span id="targetSpeed">{{ json_data.targetSpeed }}</span></li>-->
-<!--            </ul>-->
-<!--        </div>-->
-<!--    </div>-->
-
+    <div class="main-container">
+        <div id="graph"></div>
+        <div class="form-config-container"> <!-- Новый контейнер -->
+            <div class="form-container">
+                <form onsubmit="event.preventDefault(); submitConfig();">
+                    <label style="font-size: 18px; font-weight: bold">Зміна конфігурації:</label>
+                    <label for="satelliteSpeedInput">Швидкість руху супутників:</label>
+                    <input type="number" id="satelliteSpeedInput" required>
+                    <label for="objectSpeedInput">Швидкість руху об'єкта:</label>
+                    <input type="number" id="objectSpeedInput" required>
+                    <button type="submit">Отправить</button>
+                </form>
+                <div id="responseMessage"></div>
+            </div>
+            <div class="config-container">
+                <ul id="config-list">
+                    <li style="font-size: 18px; font-weight: bold">Поточна конфігурація:</li>
+                    <li>Швидкість руху супутників: <span id="satelliteSpeed">{{ json_data.satelliteSpeed }}</span></li>
+                    <li>Швидкість руху об'єкта: <span id="objectSpeed">{{ json_data.objectSpeed }}</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

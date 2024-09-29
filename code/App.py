@@ -6,10 +6,12 @@ from flask_cors import CORS
 import websockets
 import logging
 import asyncio
-from Client import get_data, connect
-from CalcPoint import calcX, calcY, calculate_distance
 import json
 import time
+
+from Client import get_data, connect
+from CalcPoint import calcX, calcY, calculate_distance
+
 
 
 app = Flask(__name__)
@@ -33,44 +35,37 @@ def start_event_loop():
     loop.create_task(start_websocket_connection())
     loop.run_forever()
 
-# @app.route('/get-config', methods=['POST'])
-# def get_config():
-#
-#     # URL целевого сервера
-#     url = "http://localhost:4000/config"
-#
-#     # Отправка PUT-запроса на целевой сервер
-#     response = requests.put(url, headers={"Content-Type": "application/json"})
-#
-#     if response.status_code == 200:
-#         response_data = response.json()
-#
-#         config_data = response_data.get('config', {})  # Извлекаем данные конфигурации
-#         measurementsPerRotation = config_data.get('measurementsPerRotation', 0)
-#         rotationSpeed = config_data.get('rotationSpeed', 0)
-#         targetSpeed = config_data.get('targetSpeed', 0)
-#         return jsonify({
-#             "measurementsPerRotation": measurementsPerRotation,
-#             "rotationSpeed": rotationSpeed,
-#             "targetSpeed": targetSpeed
-#             #"config_data": config_data
-#         })
-#     else:
-#         return jsonify({
-#             "status_code": response.status_code,
-#             "error": "Не удалось получить данные"
-#         })
+@app.route('/get-config', methods=['POST'])
+def get_config():
+    url = "http://localhost:4001/config"
+
+    response = requests.get(url, headers={"Content-Type": "application/json"})
+
+    if response.status_code == 200:
+        response_data = response.json()
+        satelliteSpeed = response_data.get('satelliteSpeed', 0)
+        objectSpeed = response_data.get('objectSpeed', 0)
+
+        return jsonify({
+            "satelliteSpeed": satelliteSpeed,
+            "objectSpeed": objectSpeed,
+        })
+    else:
+        return jsonify({
+            "status_code": response.status_code,
+            "error": "Не удалось получить данные"
+        })
 @app.route('/')
 def index():
-    # response = requests.post('http://localhost:5000/get-config')
-    #
-    # if response.status_code == 200:
-    #     json_data = response.json()  # Преобразуем ответ в JSON
-    # else:
-    #     json_data = {"error": "Не удалось получить конфигурацию"}
-    #
-    # return render_template('index.html', json_data=json_data)
-    return render_template("index.html")
+    response = requests.post('http://localhost:5000/get-config')
+
+    if response.status_code == 200:
+        json_data = response.json()  # Преобразуем ответ в JSON
+    else:
+        json_data = {"error": "Не удалось получить конфигурацию"}
+
+    return render_template('index.html', json_data=json_data)
+    #return render_template("index.html")
 
 
 @app.route('/graph-data')
@@ -234,32 +229,27 @@ def graph_data():
         print("Ошибка:", e)
         return jsonify({"error": str(e)}), 500  # Возвращаем ошибку в формате JSON
 
-# @app.route('/send-config', methods=['POST'])
-# def send_config():
-#     # Получаем данные из запроса
-#     data = request.json
-#
-#     # URL целевого сервера
-#     url = "http://localhost:4000/config"
-#
-#     # Отправка PUT-запроса на целевой сервер
-#     response = requests.put(url, headers={"Content-Type": "application/json"}, data=json.dumps(data))
-#     if response.status_code == 200:
-#         return jsonify({
-#             "status_code": response.status_code,
-#             "response": "Конфигурация обновлена",
-#             "updated_config": data  # Отправляем обновлённую конфигурацию
-#         })
-#     else:
-#         return jsonify({
-#             "status_code": response.status_code,
-#             "error": "Ошибка отправки конфигурации"
-#         })
-    # Возвращаем ответ от целевого сервера
-    # return jsonify({
-    #     "status_code": response.status_code,
-    #     "response": response.text
-    # })
+@app.route('/send-config', methods=['POST'])
+def send_config():
+    # Получаем данные из запроса
+    data = request.json
+
+    # URL целевого сервера
+    url = "http://localhost:4001/config"
+
+    # Отправка PUT-запроса на целевой сервер
+    response = requests.post(url, headers={"Content-Type": "application/json"}, data=json.dumps(data))
+    if response.status_code == 200:
+        return jsonify({
+            "status_code": response.status_code,
+            "response": "Конфигурация обновлена",
+            "updated_config": data  # Отправляем обновлённую конфигурацию
+        })
+    else:
+        return jsonify({
+            "status_code": response.status_code,
+            "error": "Ошибка отправки конфигурации"
+        })
 
 if __name__ == "__main__":
     import threading
