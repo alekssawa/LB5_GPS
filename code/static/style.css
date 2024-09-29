@@ -38,16 +38,25 @@ h1 {
     display: flex;
     flex-direction: column; /* Разместить элементы по вертикали */
     justify-content: center; /* Выровнять по вертикали в центре */
-    align-items: flex-start; /* Выравнивание по левому краю */
+    align-items: stretch; /* Выравнивание по левому краю */
     padding: 20px; /* Добавим отступы */
+
 }
 
 .config-container {
     display: flex;
+    align-self: stretch;
     flex-direction: column; /* Разместить элементы по вертикали */
-    justify-content: center; /* Выровнять по вертикали в центре */
+    justify-content: flex-start; /* Выровнять по верхнему краю контейнера */
     align-items: flex-start; /* Выравнивание по левому краю */
-    padding: 20px; /* Добавим отступы */
+    padding-left: 20px;
+}
+#config-list {
+    align-self: flex-start; /* Позволяет ul быть на верхнем краю контейнера */
+}
+#config-list li {
+    margin-top: 0;  /* Убираем отступ */
+    padding-top: 0; /* Убираем внутренний отступ, если он есть */
 }
 
 ul {
@@ -69,67 +78,3 @@ form label, form input, form button {
     margin-top: 20px;
     color: green;
 }
-
-
-
-
-/*body {*/
-/*    display: flex;*/
-/*    flex-direction: column;*/
-/*    align-items: center;*/
-/*    justify-content: center;*/
-/*    margin: 0;*/
-/*}*/
-/*h1 {*/
-/*    text-align: center; !* Центрирование заголовка *!*/
-/*}*/
-/*#graph {*/
-/*    margin: auto;  !* Центрирование графика *!*/
-/*}*/
-
-
-/*!* Контейнер для формы и списка конфигурации *!*/
-/*.container {*/
-/*    position: relative; !* Относительное позиционирование для контейнера *!*/
-/*}*/
-/*.form-container {*/
-/*    width: 75%; !* Ширина формы *!*/
-/*}*/
-
-/*!* Формы и список будут занимать определённое место *!*/
-/*.config-container {*/
-/*    width: 75%; !* Каждый элемент займет 45% ширины *!*/
-/*}*/
-/*.config-container {*/
-/*    margin-top: -15px;*/
-/*    position: absolute; !* Абсолютное позиционирование *!*/
-/*    top: 0; !* Прижимаем к верху формы *!*/
-/*    left: 320px; !* Расположим список на небольшом расстоянии от формы *!*/
-/*    width: auto; !* Позволяет списку занимать минимально необходимое место *!*/
-/*}*/
-
-/*!* Можно добавить отступы для элементов внутри формы и списка *!*/
-/*form label, form input, form button {*/
-/*    display: block;*/
-/*    margin-bottom: 10px;*/
-/*}*/
-
-/*!* Для списка можно добавить стили *!*/
-/*ul {*/
-/*    list-style: none;*/
-/*    padding: 0;*/
-/*}*/
-
-/*ul li {*/
-/*    margin-bottom: 10px;*/
-
-/*}*/
-/*ul, form {*/
-/*    padding: 0; !* Убираем внутренний отступ, если он есть *!*/
-/*}*/
-
-/*!* Стили для сообщения ответа *!*/
-/*#responseMessage {*/
-/*    margin-top: 20px;*/
-/*    color: green;*/
-/*}*/
