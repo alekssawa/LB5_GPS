@@ -7,7 +7,7 @@ cached_data = None
 
 async def send_config_to_websocket(config_data):
     uri = "ws://localhost:4001"  # Замените на адрес вашего WebSocket сервера
-    print(config_data)
+    #print(config_data)
 
     async with websockets.connect(uri) as websocket:
         await websocket.send(config_data)

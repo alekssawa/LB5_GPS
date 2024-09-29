@@ -6,26 +6,11 @@
     <title>WEB-GPS</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-        }
-        h1 {
-            text-align: center; /* Центрирование заголовка */
-        }
-        #graph {
-            margin: auto;  /* Центрирование графика */
-        }
-    </style>
+    <link rel="stylesheet" href="../static/style.css">
 </head>
 <body>
     <h1>GPS</h1>
     <div id="graph"></div>
-
     <script>
         function updateGraph(data) {
             // Создаем новый массив с данными
@@ -54,5 +39,38 @@
         // Запускаем функцию обновления данных
         setInterval(fetchData, 300);  // Обновляем график каждые 1 секунду
     </script>
+
+<!--    <div class="container">-->
+<!--        &lt;!&ndash; Форма для отправки новой конфигурации &ndash;&gt;-->
+<!--        <div class="form-container">-->
+<!--            <form onsubmit="event.preventDefault(); submitConfig();">-->
+<!--                <label style="font-size: 18px; font-weight: bold">Зміна конфігурації:</label>-->
+<!--                <label for="measurementsPerRotationInput">Вимірювань на один оберт:</label>-->
+<!--                <input type="number" id="measurementsPerRotationInput" required>-->
+
+<!--                <label for="rotationSpeedInput">Швидкість обертання:</label>-->
+<!--                <input type="number" id="rotationSpeedInput" required>-->
+
+<!--                <label for="targetSpeedInput">Швидкість цілей:</label>-->
+<!--                <input type="number" id="targetSpeedInput" required>-->
+
+<!--                <button type="submit">Отправить</button>-->
+<!--            </form>-->
+
+<!--            &lt;!&ndash; Элемент для отображения ответа сервера &ndash;&gt;-->
+<!--            <div id="responseMessage"></div>-->
+<!--        </div>-->
+
+<!--        &lt;!&ndash; Список конфигурации, который будет находиться справа от формы &ndash;&gt;-->
+<!--        <div class="config-container">-->
+<!--            <ul id="config-list">-->
+<!--                <li style="font-size: 18px; font-weight: bold">Поточна конфігурація:</li>-->
+<!--                <li>Вимірювань на один оберт: <span id="measurementsPerRotation">{{ json_data.measurementsPerRotation }}</span></li>-->
+<!--                <li>Швидкість обертання: <span id="rotationSpeed">{{ json_data.rotationSpeed }}</span></li>-->
+<!--                <li>Швидкість цілей: <span id="targetSpeed">{{ json_data.targetSpeed }}</span></li>-->
+<!--            </ul>-->
+<!--        </div>-->
+<!--    </div>-->
+
 </body>
 </html>

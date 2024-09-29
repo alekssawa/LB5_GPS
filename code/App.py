@@ -78,7 +78,6 @@ def graph_data():
     global previous_id, points  # Указываем, что используем глобальные переменные
     try:
         data = asyncio.run(get_data())
-        Object_point = None
         if data:
             x = data.get('x', 0)
             y = data.get('y', 0)
@@ -88,27 +87,29 @@ def graph_data():
             last_updated = time.time()
 
             if points:
-                if Object_point:
-                    if len(valid_points) <= 2:
-                        Object_point['marker'] = {'color': 'red', 'size': 12}
-
                 valid_points = [point for point in points if point['id_satellite'] != 'Object']  # Фильтруем только валидные точки
+
+                if len(valid_points) <= 2:
+                    existing_point = next((point for point in points if point['id_satellite'] == 'Object'),None)
+                    if existing_point:
+                      existing_point['marker'] = {'color': 'red', 'size': 12}
+
                 if len(valid_points) >= 3:
                     distance_data = []
                     for point in valid_points:
                         distance = calculate_distance(point['sentAt'], point['receivedAt'])
                         distance_data.append((point['id_satellite'], distance))
 
-                    print(f"distance: {len(distance_data)}")
-                    print(f"valid_points: {len(valid_points)}")
+                    #print(f"distance: {len(distance_data)}")
+                    #print(f"valid_points: {len(valid_points)}")
                     # Печатаем данные для отладки
                     for i in range(len(distance_data)):
                         satellite_id = distance_data[i][0][-4:]  # Берем последние 4 символа ID
-                        print(f"{satellite_id}: {distance_data[i][1]}")
+                        #print(f"{satellite_id}: {distance_data[i][1]}")
 
                         # Проверяем, существует ли точка в valid_points перед печатью
-                        if i < len(valid_points):  # Используем valid_points
-                            print(f"{valid_points[i]['id_satellite'][-4:]}: {valid_points[i]['x']}, {valid_points[i]['y']}, {valid_points[i]['sentAt']}, {valid_points[i]['receivedAt']}")
+                        # if i < len(valid_points):  # Используем valid_points
+                        #     print(f"{valid_points[i]['id_satellite'][-4:]}: {valid_points[i]['x']}, {valid_points[i]['y']}, {valid_points[i]['sentAt']}, {valid_points[i]['receivedAt']}")
                     if len(distance_data) & len(valid_points) >= 3:
                         point_X, point_Y = None, None
                         # print("Отладка входных данных для calcX и calcY:")
@@ -130,12 +131,21 @@ def graph_data():
                     Object_point = next((point for point in points if point['text'][0].startswith('Object')),None)
 
                     if Object_point:
-                        # Если точка существует, обновляем её координаты
-                        Object_point['x'] = point_X
-                        Object_point['y'] = point_Y
-                        Object_point['sentAt'] = 0
-                        Object_point['receivedAt'] = 0
-                        Object_point['last_updated'] = last_updated
+                        if len(valid_points) == 4:
+                            Object_point['x'] = point_X
+                            Object_point['y'] = point_Y
+                            Object_point['sentAt'] = 0
+                            Object_point['receivedAt'] = 0
+                            Object_point['last_updated'] = last_updated
+                            Object_point['marker'] = {'color': 'orange', 'size': 12}
+                        else:
+                            # Если точка существует, обновляем её координаты
+                            Object_point['x'] = point_X
+                            Object_point['y'] = point_Y
+                            Object_point['sentAt'] = 0
+                            Object_point['receivedAt'] = 0
+                            Object_point['last_updated'] = last_updated
+                            Object_point['marker'] = {'color': 'green', 'size': 12}
                     else:
                         #satellite_id = distance_data[-1][0][-4:]
                         print(f"Объект {id_satellite[-4:]} появился в зоне")

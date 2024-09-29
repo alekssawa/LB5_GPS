@@ -42,14 +42,14 @@ def CF(r1,r2,x1,x2,y1,y2):
 def calcX(r1,r2,r3,x1,x2,x3,y1,y2,y3):
     result = ((CF(r1,r2,x1,x2,y1,y2) * BE(y2, y3) - CF(r2, r3, x2, x3, y2, y3) * BE(y1, y2))/
               (BE(y2, y3) * AD(x1, x2) - BE(y1, y2) * AD(x2, x3)))
-    print(f"X: {result}")
+    #print(f"X: {result}")
     return result
 
 
 def calcY(r1,r2,r3,x1,x2,x3,y1,y2,y3):
     result = ((CF(r1,r2,x1,x2,y1,y2) * AD(x2, x3) - AD(x1, x2) * CF(r2, r3, x2, x3, y2, y3))/
               (BE(y1, y2) * AD(x2, x3) - AD(x1, x2) * BE(y2, y3)))
-    print(f"Y: {result}")
+    #print(f"Y: {result}")
     return result
 
 # point_X = calcX(distance_data[0][1],distance_data[1][1],distance_data[2][1],
