@@ -1,42 +1,141 @@
-#App.py
-from flask import Flask, render_template, jsonify, request
-import plotly.graph_objects as go
-import requests
-from flask_cors import CORS
-import websockets
-import logging
+from quart import Quart, render_template, jsonify, websocket, request
+from quart_cors import cors
 import asyncio
+import websockets
+import requests
 import json
+import logging
+from config import CONFIG
 import time
+#from CalcObject import custom_least_squares, tdoa_error
 
-from Client import get_data, connect
-from CalcPoint import calcX, calcY, calculate_distance
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+app = Quart(__name__)
+app = cors(app, allow_origin="*")
+
+# Инициализация начальных точек
+initial_points = [
+    {'sourceId': 'source1', 'x': 0, 'y': 0, 'id': 'initial1', 'receivedAt': int(time.time() * 1000)},
+    {'sourceId': 'source2', 'x': 0, 'y': 100, 'id': 'initial2', 'receivedAt': int(time.time() * 1000)},
+    {'sourceId': 'source3', 'x': 100, 'y': 0, 'id': 'initial3', 'receivedAt': int(time.time() * 1000)}
+]
+
+cached_data = []
+clients = set()
+
+
+def process_data(raw_data):
+    #Обновляем только receivedAt для соответствующего sourceId
+    for point in cached_data:
+        if point['id'] == raw_data.get('id'):
+            point['x'] = raw_data.get('x')
+            point['y'] = raw_data.get('y')
+            return point
+
+    # Если sourceId не найден, создаем новую точку
+    return {
+        'id': raw_data.get('id'),
+        'x': raw_data.get('x', 0),
+        'y': raw_data.get('y', 0),
+        'sentAt': raw_data.get('sentAt'),
+        'receivedAt': raw_data.get('receivedAt')
+    }
+
+
+async def connect_to_source():
+    while True:
+        try:
+            async with websockets.connect(CONFIG['SOURCE_WEBSOCKET_URI']) as websocket:
+                logger.info("Подключено к WebSocket серверу источника данных")
+                async for message in websocket:
+                    await handle_message(message)
+        except websockets.exceptions.ConnectionClosed as e:
+            logger.error(f"Соединение с источником данных закрыто: {e.reason}")
+        except Exception as e:
+            logger.error(f"Ошибка WebSocket при подключении к источнику: {e}")
+
+        logger.info("Попытка переподключения к источнику через 5 секунд...")
+        await asyncio.sleep(5)
+
+
+async def handle_message(message):
+    try:
+        raw_data = json.loads(message)
+        processed_data = process_data(raw_data)
+        if processed_data not in cached_data:
+            cached_data.append(processed_data)
 
 
 
-app = Flask(__name__)
-CORS(app)  # Разрешаем CORS для всех доменов и методов
+        print(processed_data)
+        #logger.info(f"Обработано сообщение: {processed_data}")
+        await notify_clients(processed_data)
+    except json.JSONDecodeError:
+        logger.error(f"Получено некорректное JSON сообщение: {message}")
+    except Exception as e:
+        logger.error(f"Ошибка при обработке сообщения: {e}")
 
-previous_id = None
-points = []  # Список для хранения точек
 
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+async def notify_clients(data):
+    if clients:
+        disconnected_clients = set()
+        for ws in clients:
+            try:
+                await ws.send(json.dumps(data))
+            except Exception as e:
+                logger.error(f"Ошибка при отправке данных клиенту: {e}")
+                disconnected_clients.add(ws)
 
-async def start_websocket_connection():
-    if not getattr(start_websocket_connection, "started", False):
-        await connect()
-        start_websocket_connection.started = True
+        clients.difference_update(disconnected_clients)
 
-# Запускаем цикл событий при запуске приложения
-def start_event_loop():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.create_task(start_websocket_connection())
-    loop.run_forever()
+
+@app.before_serving
+async def before_serving():
+    app.add_background_task(connect_to_source)
+
+
+@app.route('/')
+async def index():
+    url = "http://localhost:4001/config"
+    response = requests.get(url, headers={})
+
+    if response.status_code == 200:
+        json_data = response.json()
+    else:
+        json_data = {"objectSpeed": 0}  # Значения по умолчанию на случай ошибки
+
+    # Передаем json_data в шаблон index.html
+    return await render_template('index.html', json_data=json_data)
+
+
+@app.websocket('/ws')
+async def ws():
+    client = websocket._get_current_object()
+    clients.add(client)
+    try:
+        for data in cached_data:
+            await client.send(json.dumps(data))
+
+        while True:
+            data = await client.receive()
+            logger.info(f"Получено сообщение от клиента: {data}")
+            await client.send(json.dumps({"status": "received", "message": "Сообщение получено!"}))
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        logger.error(f"Ошибка в WebSocket соединении с клиентом: {e}")
+    finally:
+        clients.remove(client)
+
+
+@app.route('/get-data', methods=['GET'])
+async def get_data():
+    return jsonify(cached_data)
 
 @app.route('/get-config', methods=['POST'])
-def get_config():
+async def get_config():
     url = "http://localhost:4001/config"
 
     response = requests.get(url, headers={"Content-Type": "application/json"})
@@ -47,7 +146,6 @@ def get_config():
         objectSpeed = response_data.get('objectSpeed', 0)
 
         return jsonify({
-            "satelliteSpeed": satelliteSpeed,
             "objectSpeed": objectSpeed,
         })
     else:
@@ -55,205 +153,37 @@ def get_config():
             "status_code": response.status_code,
             "error": "Не удалось получить данные"
         })
-@app.route('/')
-def index():
-    response = requests.post('http://localhost:5000/get-config')
-
-    if response.status_code == 200:
-        json_data = response.json()  # Преобразуем ответ в JSON
-    else:
-        json_data = {"error": "Не удалось получить конфигурацию"}
-
-    return render_template('index.html', json_data=json_data)
-    #return render_template("index.html")
 
 
-@app.route('/graph-data')
-def graph_data():
-    global previous_id, points  # Указываем, что используем глобальные переменные
-    try:
-        data = asyncio.run(get_data())
-        if data:
-            x = data.get('x', 0)
-            y = data.get('y', 0)
-            sentAt = data.get('sentAt', 0)
-            receivedAt = data.get('receivedAt', 0)
-            id_satellite = data.get('id', 0)
-            last_updated = time.time()
+@app.route('/send-config', methods=['POST', 'OPTIONS'])
+async def send_config():
+    if request.method == 'OPTIONS':
+        # Preflight request. Reply successfully:
+        response = await app.make_default_options_response()
+        response.headers['Access-Control-Allow-Methods'] = 'POST'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
 
-            if points:
-                valid_points = [point for point in points if point['id_satellite'] != 'Object']  # Фильтруем только валидные точки
+    data = await request.get_json()
 
-                if len(valid_points) <= 2:
-                    existing_point = next((point for point in points if point['id_satellite'] == 'Object'),None)
-                    if existing_point:
-                      existing_point['marker'] = {'color': 'red', 'size': 12}
-
-                if len(valid_points) >= 3:
-                    distance_data = []
-                    for point in valid_points:
-                        distance = calculate_distance(point['sentAt'], point['receivedAt'])
-                        distance_data.append((point['id_satellite'], distance))
-
-                    #print(f"distance: {len(distance_data)}")
-                    #print(f"valid_points: {len(valid_points)}")
-                    # Печатаем данные для отладки
-                    for i in range(len(distance_data)):
-                        satellite_id = distance_data[i][0][-4:]  # Берем последние 4 символа ID
-                        #print(f"{satellite_id}: {distance_data[i][1]}")
-
-                        # Проверяем, существует ли точка в valid_points перед печатью
-                        # if i < len(valid_points):  # Используем valid_points
-                        #     print(f"{valid_points[i]['id_satellite'][-4:]}: {valid_points[i]['x']}, {valid_points[i]['y']}, {valid_points[i]['sentAt']}, {valid_points[i]['receivedAt']}")
-                    if len(distance_data) & len(valid_points) >= 3:
-                        point_X, point_Y = None, None
-                        # print("Отладка входных данных для calcX и calcY:")
-                        # print(f"distances: {[distance_data[0][1], distance_data[1][1], distance_data[2][1]]}")
-                        # print(f"coordinates X: {[valid_points[0]['id_satellite'][-4:],valid_points[1]['id_satellite'][-4:],valid_points[2]['id_satellite'][-4:], valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x']]}")
-                        # print(f"coordinates Y: {[valid_points[0]['id_satellite'][-4:],valid_points[1]['id_satellite'][-4:],valid_points[2]['id_satellite'][-4:], valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y']]}")
-
-                        point_X = calcX(distance_data[0][1], distance_data[1][1], distance_data[2][1],
-                                        valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x'],
-                                        valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y'])
-
-                        point_Y = calcY(distance_data[0][1], distance_data[1][1], distance_data[2][1],
-                                        valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x'],
-                                        valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y'])
-
-                        # print(f"X: {point_X}")
-                        # print(f"Y: {point_Y}")
-
-                    Object_point = next((point for point in points if point['text'][0].startswith('Object')),None)
-
-                    if Object_point:
-                        if len(valid_points) == 4:
-                            Object_point['x'] = point_X
-                            Object_point['y'] = point_Y
-                            Object_point['sentAt'] = 0
-                            Object_point['receivedAt'] = 0
-                            Object_point['last_updated'] = last_updated
-                            Object_point['marker'] = {'color': 'orange', 'size': 12}
-                        else:
-                            # Если точка существует, обновляем её координаты
-                            Object_point['x'] = point_X
-                            Object_point['y'] = point_Y
-                            Object_point['sentAt'] = 0
-                            Object_point['receivedAt'] = 0
-                            Object_point['last_updated'] = last_updated
-                            Object_point['marker'] = {'color': 'green', 'size': 12}
-                    else:
-                        #satellite_id = distance_data[-1][0][-4:]
-                        print(f"Объект {id_satellite[-4:]} появился в зоне")
-                        points.append({
-                            'x': point_X,
-                            'y': point_Y,
-                            'sentAt': 0,
-                            'receivedAt': 0,
-                            'id_satellite': 'Object',
-                            'last_updated': last_updated,
-                            'mode': 'markers+text',
-                            'marker': {'color': 'green', 'size': 12},
-                            'text': [f'Object'],
-                            'textposition': 'top right'
-                        })
-                        #previous_id = id_satellite  # Обновляем предыдущее значение
-
-
-            # Проверяем, существует ли уже точка с таким id_satellite
-            existing_point = next((point for point in points if point['text'][0].startswith(id_satellite[-4:])), None)
-
-            if existing_point:
-                # Если точка существует, обновляем её координаты
-                existing_point['x'] = x
-                existing_point['y'] = y
-                existing_point['sentAt'] = sentAt
-                existing_point['receivedAt'] = receivedAt
-                existing_point['last_updated'] = last_updated
-            else:
-                print(f"Спутник {id_satellite[-4:]} зашел в зону")
-                # Если точки нет, добавляем новую
-                points.append({
-                    'x': x,
-                    'y': y,
-                    'sentAt': sentAt,
-                    'receivedAt': receivedAt,
-                    'id_satellite': id_satellite,
-                    'last_updated': last_updated,
-                    'mode': 'markers+text',
-                    'marker': {'color': 'blue', 'size': 10},
-                    'text': [f'{id_satellite[-4:]}'],
-                    'textposition': 'top right'
-                })
-                previous_id = id_satellite  # Обновляем предыдущее значение
-
-        # Удаляем устаревшие точки, кроме объекта
-        current_time = time.time()
-        points_to_remove = [point for point in points if current_time - point['last_updated'] > 7 and point['id_satellite'] != 'Object']
-
-        # Печатаем информацию о выходе из зоны
-        for point in points_to_remove:
-            print(f"Спутник {(point['id_satellite'])[-4:]} вышел с зоны")
-
-        # Обновляем список точек, исключая устаревшие
-        points = [point for point in points if current_time - point['last_updated'] <= 7 or point['id_satellite'] == 'Object']
-
-        if points:
-            x_values = [point['x'] for point in points]
-            y_values = [point['y'] for point in points]
-            layout = {
-                'xaxis': {
-                    'title': 'X',
-                    'range': [0, 120],  # Добавляем небольшой отступ
-                },
-                'yaxis': {
-                    'title': 'Y',
-                    'range': [0, 120],  # Добавляем небольшой отступ
-                },
-            }
-        else:
-            # Если points пустой, устанавливаем layout по умолчанию
-            layout = {
-                'xaxis': {
-                    'title': 'X',
-                    'range': [-210, 210],
-                },
-                'yaxis': {
-                    'title': 'Y',
-                    'range': [-210, 210],
-                },
-            }
-        return jsonify({'data': [
-            {'x': point['x'], 'y': point['y'], 'text': point['text'], 'marker': point['marker'], 'mode': point['mode'],
-             'textposition': point['textposition']} for point in points], 'layout': layout})  # Возвращаем JSON
-    except Exception as e:
-        print("Ошибка:", e)
-        return jsonify({"error": str(e)}), 500  # Возвращаем ошибку в формате JSON
-
-@app.route('/send-config', methods=['POST'])
-def send_config():
-    # Получаем данные из запроса
-    data = request.json
-
-    # URL целевого сервера
     url = "http://localhost:4001/config"
 
-    # Отправка PUT-запроса на целевой сервер
-    response = requests.post(url, headers={"Content-Type": "application/json"}, data=json.dumps(data))
-    if response.status_code == 200:
+    try:
+        response = requests.post(url,
+                                 headers={"Content-Type": "application/json"},
+                                 json=data)
+
         return jsonify({
             "status_code": response.status_code,
-            "response": "Конфигурация обновлена",
-            "updated_config": data  # Отправляем обновлённую конфигурацию
+            "response": "Конфигурация обновлена" if response.status_code == 200 else "Ошибка обновления конфигурации",
+            "updated_config": data
         })
-    else:
+    except requests.exceptions.RequestException as e:
         return jsonify({
-            "status_code": response.status_code,
-            "error": "Ошибка отправки конфигурации"
-        })
+            "status_code": 500,
+            "error": str(e)
+        }), 500
+
 
 if __name__ == "__main__":
-    import threading
-    event_loop_thread = threading.Thread(target=start_event_loop)
-    event_loop_thread.start()
-
-    app.run(debug=True)
+    app.run(host=CONFIG['HOST'], port=CONFIG['PORT'], debug=CONFIG['DEBUG'])
