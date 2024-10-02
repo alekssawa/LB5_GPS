@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         pointTimers[data.id] = setTimeout(() => {
             removePoint(data.id);
-        }, 3000);
+        }, 2000);
 
         if (data.id in pointData) {
             // Обновление существующей точки
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             // Добавление новой точки
             const newTrace = {
-                name: data.id.slice(0, 4),
+                name: data.id.slice(-4),
                 x: [data.x],
                 y: [data.y],
                 text: [data.id],

@@ -7,7 +7,7 @@ import json
 import logging
 from config import CONFIG
 import time
-#from CalcObject import custom_least_squares, tdoa_error
+from CalcPoint import calcX, calcY, calculate_distance
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -62,14 +62,36 @@ async def connect_to_source():
 
 async def handle_message(message):
     try:
+        distance_data = []
+
         raw_data = json.loads(message)
         processed_data = process_data(raw_data)
         if processed_data not in cached_data:
             cached_data.append(processed_data)
+        if len(cached_data) > 3:
+            cached_data.pop(0)
+
+        if len(cached_data) == 3:
+            for point in cached_data:
+                distance = calculate_distance(point['sentAt'], point['receivedAt'])
+                distance_data.append((point['id'], distance))
+
+        print(distance_data)
 
 
+        #print(cached_data)
+        # point_X = calcX(distance_data[0][1], distance_data[1][1], distance_data[2][1],
+        #                 valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x'],
+        #                 valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y'])
+        #
+        # point_Y = calcY(distance_data[0][1], distance_data[1][1], distance_data[2][1],
+        #                 valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x'],
+        #                 valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y'])
 
-        print(processed_data)
+        # print(f"X: {point_X}")
+        # print(f"Y: {point_Y}")
+
+        #print(processed_data)
         #logger.info(f"Обработано сообщение: {processed_data}")
         await notify_clients(processed_data)
     except json.JSONDecodeError:
