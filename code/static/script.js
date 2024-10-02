@@ -36,58 +36,104 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    function updateGraph(data) {
-        const hoverTextSource = `ID: ${data.id.slice(-4)}<br>X: ${data.x}<br>Y: ${data.y}<br>receivedAt: ${data.receivedAt}`;
+function updateGraph(data) {
 
-        // Обновляем таймер для точки
-        if (pointTimers[data.id]) {
-            clearTimeout(pointTimers[data.id]);
-        }
-        pointTimers[data.id] = setTimeout(() => {
-            removePoint(data.id);
-        }, 2000);
+    const hoverTextSource = `ID: ${data.id.slice(-4)}<br>X: ${data.x}<br>Y: ${data.y}<br>receivedAt: ${data.receivedAt}`;
 
-        if (data.id in pointData) {
-            // Обновление существующей точки
-            const traceIndex = pointData[data.id].traceIndex;
+    // Обновляем таймер для основной точки
+    if (pointTimers[data.id]) {
+        clearTimeout(pointTimers[data.id]);
+    }
+    pointTimers[data.id] = setTimeout(() => {
+        removePoint(data.id);
+    }, 2000);
+
+    // Обновляем или добавляем точку для Object_Name
+    if (data.Object_Name) {
+        if (Object.keys(pointData).length === 3) {
+            const hoverTextObject = `ID: ${data.Object_Name}<br>X_OBJ: ${data.x_OBJ}<br>Y_OBJ: ${data.y_OBJ}<br>receivedAt: ${data.receivedAt}`;
+
+        if (data.Object_Name in pointData) {
+            // Обновление существующей точки объекта
+            const traceIndex = pointData[data.Object_Name].traceIndex;
 
             Plotly.restyle('graph', {
-                x: [[data.x]],
-                y: [[data.y]],
-                text: [[hoverTextSource]]
+                x: [[data.x_OBJ]],
+                y: [[data.y_OBJ]],
+                text: [[hoverTextObject]]
             }, [traceIndex]).catch(error => {
-                console.error('Error updating point:', error);
+                console.error('Error updating object point:', error);
             });
 
-            // Обновляем данные точки
-            pointData[data.id].x = data.x;
-            pointData[data.id].y = data.y;
-            pointData[data.id].receivedAt = data.receivedAt;
+            // Обновляем данные точки объекта
+            pointData[data.Object_Name].x = data.x_OBJ;
+            pointData[data.Object_Name].y = data.y_OBJ;
         } else {
-            // Добавление новой точки
-            const newTrace = {
-                name: data.id.slice(-4),
-                x: [data.x],
-                y: [data.y],
-                text: [data.id],
+            // Добавление новой точки для Object_Name
+            const newObjectTrace = {
+                name: data.Object_Name,
+                x: [data.x_OBJ],
+                y: [data.y_OBJ],
+                text: [hoverTextObject],
                 mode: 'markers',
                 type: 'scatter',
-                marker: { size: 10 }
+                marker: { size: 10, color: 'red' }  // Цвет маркера для объекта
             };
 
-            Plotly.addTraces('graph', newTrace).then(() => {
-                pointData[data.id] = {
-                    traceIndex: traceIndex,
-                    x: data.x,
-                    y: data.y,
-                    receivedAt: data.receivedAt
+            Plotly.addTraces('graph', newObjectTrace).then(() => {
+                pointData[data.Object_Name] = {
+                    traceIndex: traceIndex++, // Увеличиваем traceIndex
+                    x: data.x_OBJ,
+                    y: data.y_OBJ
                 };
-                traceIndex++;
             }).catch(error => {
-                console.error('Error adding new point:', error);
+                console.error('Error adding new object point:', error);
             });
+
+            }
         }
+
+    // Обновляем или добавляем точку для основного ID
+    if (data.id in pointData) {
+        // Обновление существующей точки
+        const traceIndex = pointData[data.id].traceIndex;
+
+        Plotly.restyle('graph', {
+            x: [[data.x]],
+            y: [[data.y]],
+            text: [[hoverTextSource]]
+        }, [traceIndex]).catch(error => {
+            console.error('Error updating point:', error);
+        });
+
+        // Обновляем данные точки
+        pointData[data.id].x = data.x;
+        pointData[data.id].y = data.y;
+        pointData[data.id].receivedAt = data.receivedAt;
+    } else {
+        // Добавление новой точки
+        const newTrace = {
+            name: data.id.slice(-4),
+            x: [data.x],
+            y: [data.y],
+            text: [hoverTextSource],
+            mode: 'markers',
+            type: 'scatter',
+            marker: { size: 10 }
+        };
+
+        Plotly.addTraces('graph', newTrace).then(() => {
+            pointData[data.id] = {
+                traceIndex: traceIndex++, // Увеличиваем traceIndex
+                x: data.x,
+                y: data.y,
+                receivedAt: data.receivedAt
+            };
+        }).catch(error => {
+            console.error('Error adding new point:', error);
+        });
     }
+}
 
     function removePoint(id) {
         if (id in pointData) {
@@ -143,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
             responseMessage.innerText = 'Помилка: ' + error.message;
             responseMessage.style.color = 'red';
         });
-    }
+    }}
 
     // Инициализация подключения
     connect();

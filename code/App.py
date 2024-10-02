@@ -76,20 +76,27 @@ async def handle_message(message):
                 distance = calculate_distance(point['sentAt'], point['receivedAt'])
                 distance_data.append((point['id'], distance))
 
-        print(distance_data)
+        #print(distance_data)
 
 
         #print(cached_data)
-        # point_X = calcX(distance_data[0][1], distance_data[1][1], distance_data[2][1],
-        #                 valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x'],
-        #                 valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y'])
-        #
-        # point_Y = calcY(distance_data[0][1], distance_data[1][1], distance_data[2][1],
-        #                 valid_points[0]['x'], valid_points[1]['x'], valid_points[2]['x'],
-        #                 valid_points[0]['y'], valid_points[1]['y'], valid_points[2]['y'])
+        point_X = calcX(distance_data[0][1], distance_data[1][1], distance_data[2][1],
+                        cached_data[0]['x'], cached_data[1]['x'], cached_data[2]['x'],
+                        cached_data[0]['y'], cached_data[1]['y'], cached_data[2]['y'])
+
+        point_Y = calcY(distance_data[0][1], distance_data[1][1], distance_data[2][1],
+                        cached_data[0]['x'], cached_data[1]['x'], cached_data[2]['x'],
+                        cached_data[0]['y'], cached_data[1]['y'], cached_data[2]['y'])
 
         # print(f"X: {point_X}")
         # print(f"Y: {point_Y}")
+
+        point_OBJ = {
+                'Object_Name': 'Object',
+                'x_OBJ': point_X,
+                'y_OBJ': point_Y,
+        }
+        processed_data.update(point_OBJ)
 
         #print(processed_data)
         #logger.info(f"Обработано сообщение: {processed_data}")
